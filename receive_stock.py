@@ -3,6 +3,7 @@ import psutil
 import time
 import requests
 import redis
+import yaml
 
 # Bağlantı Ayarları
 connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
@@ -37,27 +38,40 @@ def kuma_push_success(count):
     except:
         pass
 
+# Ayarları dosyadan okuyan fonksiyon
+def load_config():
+    try:
+        with open("config.yaml", "r") as f:
+            return yaml.safe_load(f)
+    except Exception as e:
+        print(f"[!] Ayar dosyası okunamadı, varsayılan değerler kullanılıyor: {e}")
+        return {"cpu_limit": 80, "medium_limit": 50}
+
 def callback(ch, method, properties, body):
+    # 1. Her mesaj geldiğinde güncel ayarları oku (Hot-Reload)
+    config = load_config()
+    cpu_limit = config.get("cpu_limit", 80)
+    medium_limit = config.get("medium_limit", 50)
+
     routing_key = method.routing_key
     cpu_suan = psutil.cpu_percent(interval=None) 
     
-    # Uptime Kuma güncelleme
     kuma_push_cpu(cpu_suan)
 
-    print(f"\n[ANALİZ] CPU: %{cpu_suan} | Gelen İş: {routing_key}")
+    print(f"\n[ANALİZ] CPU: %{cpu_suan} | Limitler: %{medium_limit}-%{cpu_limit} | İş: {routing_key}")
 
-    # SENARYO 1: ÇOK YÜKSEK YÜK (%80+) -> Sadece kritik işleri kabul et
-    if cpu_suan >= 80 and ".kritik" not in routing_key:
-        print(f" [!] KRİTİK SEVİYE: {routing_key} reddedildi.")
-        r.incr('reddedilen_is') # Redis sayacını artır
+    # Karar mekanizmasını config değişkenlerine bağlama
+    # SENARYO 1: KRİTİK SEVİYE
+    if cpu_suan >= cpu_limit and ".kritik" not in routing_key:
+        print(f" [!] KRİTİK SEVİYE: {routing_key} reddedildi (Limit: %{cpu_limit})")
+        r.incr('reddedilen_is')
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
-        time.sleep(0.5)
         return
 
-    # SENARYO 2: ORTA YÜK (%50 - %80) -> Ağır işleri reddet
-    elif 50 <= cpu_suan < 80 and ".agir" in routing_key:
-        print(f" [!] ORTA SEVİYE: Ağır iş ({routing_key}) pas geçildi.")
-        r.incr('pas_gecilen_is') # Yeni sayaç
+    # SENARYO 2: ORTA SEVİYE
+    elif medium_limit <= cpu_suan < cpu_limit and ".agir" in routing_key:
+        print(f" [!] ORTA SEVİYE: Ağır iş ({routing_key}) pas geçildi (Limit: %{medium_limit})")
+        r.incr('pas_gecilen_is')
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
         return
 
