@@ -1,0 +1,5 @@
+pika
+psutil
+requests
+redis
+pyyaml

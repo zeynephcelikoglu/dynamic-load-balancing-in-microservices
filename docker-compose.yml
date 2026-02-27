@@ -1,11 +1,38 @@
 version: '3.8'
+
 services:
+  # RabbitMQ Servisi
   rabbitmq:
-    image: rabbitmq:3-management
-    container_name: rabbitmq_broker
+    image: "rabbitmq:3-management"
     ports:
-      - "5672:5672"   # Kodun bağlanacağı kapı
-      - "15672:15672" # İzlenecek panelin kapısı
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck: # Bu blok RabbitMQ'nun 'gerçekten' hazır olduğunu kontrol eder
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis Servisi
+  redis:
+    image: "redis:latest"
+    ports:
+      - "6379:6379"
+
+  # Uptime Kuma Servisi
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    ports:
+      - "3002:3001"
+    volumes:
+      - ./kuma-data:/app/data  # Bu satırı ekledik
+
+  # Bizim Worker (İşçi) Servisimiz
+  worker:
+    build: .
+    restart: always  # Bu satırı ekle: Hata verirse Docker onu otomatik tekrar açar
+    depends_on:
+      rabbitmq:
+        condition: service_healthy # RabbitMQ tamamen hazır olmadan worker açılmaz
+      redis:
+        condition: service_started

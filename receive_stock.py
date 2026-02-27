@@ -6,11 +6,11 @@ import redis
 import yaml
 
 # Bağlantı Ayarları
-connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
+connection = pika.BlockingConnection(pika.ConnectionParameters(host='rabbitmq'))
 channel = connection.channel()
 
 # Redis Bağlantısı
-r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+r = redis.Redis(host='redis', port=6379, db=0, decode_responses=True)
 
 # DLX Yapılandırması
 channel.exchange_declare(exchange='dead_letter_exchange', exchange_type='fanout')
@@ -25,19 +25,20 @@ queue_name = result.method.queue
 channel.queue_bind(exchange='topic_logs', queue=queue_name, routing_key='#')
 
 def kuma_push_cpu(cpu_degeri):
-    url = f"http://localhost:3002/api/push/d1L4L9an1v?status=up&msg=CPU_Yuku&ping={cpu_degeri}"
+    # 'localhost:3002' yerine 'uptime-kuma:3001' yazdık
+    url = f"http://uptime-kuma:3001/api/push/nAU4iRLG0x?status=up&msg=OK&ping={cpu_degeri}"
     try:
         requests.get(url, timeout=2)
     except:
         pass
 
 def kuma_push_success(count):
-    url = f"http://localhost:3002/api/push/iXwVwdIaef?status=up&msg=OK&ping={count}"
+    # 'localhost:3002' yerine 'uptime-kuma:3001' yazdık
+    url = f"http://uptime-kuma:3001/api/push/45EgWqf8lU?status=up&msg=OK&ping={count}"
     try:
         requests.get(url, timeout=2)
     except:
         pass
-
 # Ayarları dosyadan okuyan fonksiyon
 def load_config():
     try:
