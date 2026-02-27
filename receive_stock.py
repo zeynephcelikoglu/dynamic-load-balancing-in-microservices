@@ -6,88 +6,55 @@ import time
 connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
 channel = connection.channel()
 
-# 2. DLX (Yedek Plan) Tanımlama
+# 2. DLX Yapılandırması
 channel.exchange_declare(exchange='dead_letter_exchange', exchange_type='fanout')
 channel.queue_declare(queue='backup_queue', durable=True)
 channel.queue_bind(exchange='dead_letter_exchange', queue='backup_queue')
 
-# 3. Ana Exchange Tanımlama
+# 3. Ana Exchange ve Kuyruk
 channel.exchange_declare(exchange='topic_logs', exchange_type='topic')
-
-# 4. Ana Kuyruğu DLX ile Bağlama
-# Eğer bu kuyruktaki mesajlar sahipsiz kalırsa DLX'e gidecek
-# Kuyruğa giren mesaj 5 saniye (5000 ms) içinde işlenmezse DLX'e gider
-args = {
-    'x-dead-letter-exchange': 'dead_letter_exchange',
-    'x-message-ttl': 5000 
-}
+args = {'x-dead-letter-exchange': 'dead_letter_exchange', 'x-message-ttl': 5000}
 result = channel.queue_declare(queue='ortak_is_havuzu', durable=True, arguments=args)
 queue_name = result.method.queue
 
-def update_bindings(cpu):
-    print(f"--- Güncelleme Başlatıldı: CPU %{cpu} ---")
-    
-    # 1. ADIM: TAM TEMİZLİK
-    # Sadece '#' değil, olabilecek tüm ihtimalleri tek tek siliyoruz.
-    # Bu sayede kuyruk "tertemiz" hale gelir.
-    try:
-        channel.queue_unbind(exchange='topic_logs', queue=queue_name, routing_key='#')
-        channel.queue_unbind(exchange='topic_logs', queue=queue_name, routing_key='*.*.kritik')
-        channel.queue_unbind(exchange='topic_logs', queue=queue_name, routing_key='stok.#')
-        channel.queue_unbind(exchange='topic_logs', queue=queue_name, routing_key='odeme.#')
-    except:
-        pass # Eğer bağ yoksa hata vermesin diye
-    
-    # 2. ADIM: YENİ KURALLARI YAZ
-    if cpu < 50:
-        # Sadece bu kural varken her şeyi alır
-        channel.queue_bind(exchange='topic_logs', queue=queue_name, routing_key='#')
-        print(" [STATUS] CPU Düşük: Her şey serbest (#)")
-    else:
-        # Sadece bu kural varken ASLA normal mesaj alamaz
-        channel.queue_bind(exchange='topic_logs', queue=queue_name, routing_key='*.*.kritik')
-        print(" [STATUS] CPU YÜKSEK: SADECE KRİTİK İŞLER!")
+# Başlangıçta her şeyi dinleyecek şekilde bağlayalım (#)
+channel.queue_bind(exchange='topic_logs', queue=queue_name, routing_key='#')
 
 def callback(ch, method, properties, body):
     routing_key = method.routing_key
-    cpu_suan = test_cpu_degeri  # Test ettiğimiz CPU değeri
+    
+    # --- 3. AŞAMA: CANLI CPU ÖLÇÜMÜ ---
+    # interval=None anlık, hızlı ölçüm sağlar.
+    cpu_suan = psutil.cpu_percent(interval=None) 
+    
+    print(f"\n[ANALİZ] CPU: %{cpu_suan} | Gelen İş: {routing_key}")
 
-    # AKILLI KONTROL: Eğer CPU yüksekse ve gelen iş kritik değilse REDDET
+    # SENARYO 1: ÇOK YÜKSEK YÜK (%80+) -> Sadece kritik işleri kabul et
     if cpu_suan >= 80 and ".kritik" not in routing_key:
-        print(f" [!] REDDEDİLDİ: {routing_key} (CPU Yüksek, başka işçiye gitsin)")
-        # requeue=True diyerek mesajı kuyruğa geri bırakıyoruz. 
-        # Böylece boş olan Worker 2 bu mesajı alabilir.
+        print(f" [!] KRİTİK SEVİYE: {routing_key} reddedildi, başkasına yönlendiriliyor...")
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
-        # 0.5 saniye bekle ki RabbitMQ mesajı hemen sana geri sormasın, 
-        # diğer işçiye sormaya vakit bulsun.
-        time.sleep(0.5)
+        time.sleep(0.5) # Diğer worker'a vakit tanı
         return
 
-    # Normal İşleme Süreci
-    print(f" [x] İşleniyor: {routing_key} | İçerik: {body.decode()}")
+    # SENARYO 2: ORTA YÜK (%50 - %80) -> Ağır işleri reddet, hafifleri yap
+    elif 50 <= cpu_suan < 80 and ".agir" in routing_key:
+        print(f" [!] ORTA SEVİYE: Ağır iş ({routing_key}) pas geçildi.")
+        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+        return
+
+    # İŞLEME SÜRECİ (Normal Şartlar veya Uygun İş)
+    print(f" [x] İşleniyor: {routing_key}")
+    # İşin tipine göre işlem süresi simülasyonu
     if "agir" in routing_key:
-        time.sleep(2)
+        time.sleep(1.5)
     else:
         time.sleep(0.2)
     
     ch.basic_ack(delivery_tag=method.delivery_tag)
 
-# Başlangıç Ayarı
-cpu_usage = psutil.cpu_percent()
-
-test_cpu_degeri = 20 # Burayı 90 yaparsan "Yorgun", 20 yaparsan "Boş" olur.
-
-if test_cpu_degeri is not None:
-    cpu_usage = test_cpu_degeri
-else:
-    cpu_usage = psutil.cpu_percent()
-
-update_bindings(test_cpu_degeri)
-
-# Adil dağıtım için (Prefetch): Bir işçi bir işi bitirmeden yenisini almasın
+# Adil Dağıtım
 channel.basic_qos(prefetch_count=1)
-
 channel.basic_consume(queue=queue_name, on_message_callback=callback)
 
-print(' [*] Akıllı İşçi çalışıyor. Çıkış için CTRL+C')
+print(' [*] Otonom İşçi (3. Aşama) Aktif. Gerçek zamanlı donanım takibi yapılıyor...')
 channel.start_consuming()
