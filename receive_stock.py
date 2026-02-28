@@ -4,6 +4,7 @@ import time
 import requests
 import redis
 import yaml
+import random
 
 # Bağlantı Ayarları
 connection = pika.BlockingConnection(pika.ConnectionParameters(host='rabbitmq'))
@@ -24,6 +25,7 @@ result = channel.queue_declare(queue='ortak_is_havuzu', durable=True, arguments=
 queue_name = result.method.queue
 channel.queue_bind(exchange='topic_logs', queue=queue_name, routing_key='#')
 
+# --- PUSH FONKSİYONLARI ---
 def kuma_push_cpu(cpu_degeri):
     url = f"http://uptime-kuma:3001/api/push/nAU4iRLG0x?status=up&msg=OK&ping={cpu_degeri}"
     try:
@@ -37,7 +39,7 @@ def kuma_push_success(count):
         requests.get(url, timeout=2)
     except:
         pass
-# Ayarları dosyadan okuyan fonksiyon
+
 def load_config():
     try:
         with open("config.yaml", "r") as f:
@@ -46,48 +48,55 @@ def load_config():
         print(f"[!] Ayar dosyası okunamadı, varsayılan değerler kullanılıyor: {e}")
         return {"cpu_limit": 80, "medium_limit": 50}
 
-def callback(ch, method, properties, body):
-    # Her mesaj geldiğinde güncel ayarları oku (Hot-Reload)
-    config = load_config()
-    cpu_limit = config.get("cpu_limit", 80)
-    medium_limit = config.get("medium_limit", 50)
-
-    routing_key = method.routing_key
-    cpu_suan = psutil.cpu_percent(interval=None) 
+def get_health_score():
+    """CPU ve RAM değerlerini alıp ağırlıklı skor üretir."""
+    cpu = psutil.cpu_percent(interval=None)
+    ram = psutil.virtual_memory().percent
     
-    kuma_push_cpu(cpu_suan)
+    # %70 CPU, %30 RAM ağırlığı
+    score = (cpu * 0.7) + (ram * 0.3)
+    return round(score, 2), cpu, ram
 
-    print(f"\n[ANALİZ] CPU: %{cpu_suan} | Limitler: %{medium_limit}-%{cpu_limit} | İş: {routing_key}")
+def callback(ch, method, properties, body):
+    config = load_config()
+    health_limit = config.get("cpu_limit", 80)
 
-    # Karar mekanizmasını config değişkenlerine bağlama
-    # KRİTİK SEVİYE
-    if cpu_suan >= cpu_limit and ".kritik" not in routing_key:
-        print(f" [!] KRİTİK SEVİYE: {routing_key} reddedildi (Limit: %{cpu_limit})")
+    # Skor hesapla
+    score, cpu_now, ram_now = get_health_score()
+    routing_key = method.routing_key
+    
+    # Dashboarda gönder
+    kuma_push_cpu(score)
+
+    print("-" * 30)
+    print(f"[OTONOM ANALİZ]")
+    print(f" > Sağlık Skoru: {score}")
+    print(f" > Detaylar: CPU %{cpu_now} | RAM %{ram_now}")
+    print(f" > Gelen İş: {routing_key}")
+
+    # Karar Mekanizması
+    if score >= health_limit and ".kritik" not in routing_key:
+        print(f" [!] DURUM: KRİTİK ({score}) - İş reddedildi, kuyruğa dönüyor.")
         r.incr('reddedilen_is')
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
         return
-
-    # ORTA SEVİYE
-    elif medium_limit <= cpu_suan < cpu_limit and ".agir" in routing_key:
-        print(f" [!] ORTA SEVİYE: Ağır iş ({routing_key}) pas geçildi (Limit: %{medium_limit})")
-        r.incr('pas_gecilen_is')
-        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
-        return
-
+    
     # İşleme süreci
-    print(f" [x] İşleniyor: {routing_key}")
-    if "agir" in routing_key:
-        time.sleep(1.5)
-    else:
-        time.sleep(0.2)
-    
-    # Başarıyı Redise kaydet
-    r.incr('basarili_is')
+    print(f" [x] DURUM: UYGUN - İşleniyor...")
 
+    # İşin ağırlığına göre bekleme süresi
+    if ".agir" in routing_key:
+        bekleme = random.uniform(1.0, 2.0)
+    else:
+        bekleme = random.uniform(0.1, 0.4)
+
+    time.sleep(bekleme)
+    print(f" [OK] İş {bekleme:.2f} saniyede tamamlandı.")
+
+    # İstatistikleri Güncelle
+    r.incr('basarili_is')
     guncel_basari = r.get('basarili_is')
-    kuma_push_success(guncel_basari) # Kumadaki başarı grafiğini güncelle
-    
-    # İstatistikleri getir
+    kuma_push_success(guncel_basari)
     basari = r.get('basarili_is') or 0
     red = r.get('reddedilen_is') or 0
     print(f"--- REDIS İSTATİSTİK --- Toplam Başarı: {basari} | Toplam Red: {red}")

@@ -29,6 +29,8 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
     restart: always
+    volumes:
+      - .:/app
     depends_on:
       rabbitmq:
         condition: service_healthy
