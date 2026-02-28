@@ -40,6 +40,13 @@ def kuma_push_success(count):
     except:
         pass
 
+def kuma_push_rejected(count):
+    url = f"http://uptime-kuma:3001/api/push/srvOzTRdo6?status=up&msg=OK&ping={count}"
+    try:
+        requests.get(url, timeout=2)
+    except:
+        pass
+
 def load_config():
     try:
         with open("config.yaml", "r") as f:
@@ -74,10 +81,17 @@ def callback(ch, method, properties, body):
     print(f" > Detaylar: CPU %{cpu_now} | RAM %{ram_now}")
     print(f" > Gelen İş: {routing_key}")
 
+    guncel_red = r.get('reddedilen_is') or 0
+    kuma_push_rejected(guncel_red)
+
     # Karar Mekanizması
     if score >= health_limit and ".kritik" not in routing_key:
         print(f" [!] DURUM: KRİTİK ({score}) - İş reddedildi, kuyruğa dönüyor.")
         r.incr('reddedilen_is')
+
+        guncel_red = r.get('reddedilen_is')
+        kuma_push_rejected(guncel_red)
+
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
         return
     
