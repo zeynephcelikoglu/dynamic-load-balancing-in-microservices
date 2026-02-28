@@ -1,38 +1,34 @@
 version: '3.8'
 
 services:
-  # RabbitMQ Servisi
   rabbitmq:
     image: "rabbitmq:3-management"
     ports:
       - "5672:5672"
       - "15672:15672"
-    healthcheck: # Bu blok RabbitMQ'nun 'gerçekten' hazır olduğunu kontrol eder
+    healthcheck: 
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  # Redis Servisi
   redis:
     image: "redis:latest"
     ports:
       - "6379:6379"
 
-  # Uptime Kuma Servisi
   uptime-kuma:
     image: louislam/uptime-kuma:1
     ports:
       - "3002:3001"
     volumes:
-      - ./kuma-data:/app/data  # Bu satırı ekledik
+      - ./kuma-data:/app/data 
 
-  # Bizim Worker (İşçi) Servisimiz
   worker:
     build: .
-    restart: always  # Bu satırı ekle: Hata verirse Docker onu otomatik tekrar açar
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: always
     depends_on:
       rabbitmq:
-        condition: service_healthy # RabbitMQ tamamen hazır olmadan worker açılmaz
-      redis:
-        condition: service_started
+        condition: service_healthy

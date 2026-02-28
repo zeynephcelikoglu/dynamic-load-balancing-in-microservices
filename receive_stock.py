@@ -25,7 +25,6 @@ queue_name = result.method.queue
 channel.queue_bind(exchange='topic_logs', queue=queue_name, routing_key='#')
 
 def kuma_push_cpu(cpu_degeri):
-    # 'localhost:3002' yerine 'uptime-kuma:3001' yazdık
     url = f"http://uptime-kuma:3001/api/push/nAU4iRLG0x?status=up&msg=OK&ping={cpu_degeri}"
     try:
         requests.get(url, timeout=2)
@@ -33,7 +32,6 @@ def kuma_push_cpu(cpu_degeri):
         pass
 
 def kuma_push_success(count):
-    # 'localhost:3002' yerine 'uptime-kuma:3001' yazdık
     url = f"http://uptime-kuma:3001/api/push/45EgWqf8lU?status=up&msg=OK&ping={count}"
     try:
         requests.get(url, timeout=2)
@@ -49,7 +47,7 @@ def load_config():
         return {"cpu_limit": 80, "medium_limit": 50}
 
 def callback(ch, method, properties, body):
-    # 1. Her mesaj geldiğinde güncel ayarları oku (Hot-Reload)
+    # Her mesaj geldiğinde güncel ayarları oku (Hot-Reload)
     config = load_config()
     cpu_limit = config.get("cpu_limit", 80)
     medium_limit = config.get("medium_limit", 50)
@@ -62,14 +60,14 @@ def callback(ch, method, properties, body):
     print(f"\n[ANALİZ] CPU: %{cpu_suan} | Limitler: %{medium_limit}-%{cpu_limit} | İş: {routing_key}")
 
     # Karar mekanizmasını config değişkenlerine bağlama
-    # SENARYO 1: KRİTİK SEVİYE
+    # KRİTİK SEVİYE
     if cpu_suan >= cpu_limit and ".kritik" not in routing_key:
         print(f" [!] KRİTİK SEVİYE: {routing_key} reddedildi (Limit: %{cpu_limit})")
         r.incr('reddedilen_is')
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
         return
 
-    # SENARYO 2: ORTA SEVİYE
+    # ORTA SEVİYE
     elif medium_limit <= cpu_suan < cpu_limit and ".agir" in routing_key:
         print(f" [!] ORTA SEVİYE: Ağır iş ({routing_key}) pas geçildi (Limit: %{medium_limit})")
         r.incr('pas_gecilen_is')
