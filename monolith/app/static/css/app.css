@@ -1,0 +1,3 @@
+/* Simple clean UI tweaks */
+body { background-color: #f8f9fa; }
+.card img { object-fit: cover; height: 180px; }

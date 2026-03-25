@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h3 mb-3">Your Cart</h1>
+{% if not items %}
+<p>No items yet.</p>
+{% else %}
+<table class="table align-middle">
+  <thead><tr><th>Product</th><th style="width:120px">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Line Total</th><th></th></tr></thead>
+  <tbody>
+    {% set subtotal = 0 %}
+    {% for it in items %}
+      {% set line_total = it.product.price * it.qty %}
+      {% set subtotal = subtotal + line_total %}
+      <tr>
+        <td>{{ it.product.name }}</td>
+        <td>
+          <form method="post" action="{{ url_for('cart.update_item', pid=it.product.id) }}" class="d-flex gap-2">
+            {{ csrf_token() }}
+            <input name="qty" type="number" min="0" value="{{ it.qty }}" class="form-control form-control-sm">
+            <button class="btn btn-sm btn-outline-secondary">Update</button>
+          </form>
+        </td>
+        <td class="text-end">₹{{ '%.2f'|format(it.product.price) }}</td>
+        <td class="text-end">₹{{ '%.2f'|format(line_total) }}</td>
+        <td></td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<form method="post" action="{{ url_for('cart.apply_coupon') }}" class="row g-2 mb-3">
+  {{ csrf_token() }}
+  <div class="col-sm-4">
+    <input name="code" value="{{ coupon or '' }}" class="form-control" placeholder="Coupon code (e.g., SAVE10)">
+  </div>
+  <div class="col-sm-2">
+    <button class="btn btn-outline-primary w-100">Apply</button>
+  </div>
+</form>
+
+<div class="d-flex justify-content-end">
+  <a href="{{ url_for('orders.checkout') }}" class="btn btn-success btn-lg">Checkout</a>
+</div>
+{% endif %}
+{% endblock %}

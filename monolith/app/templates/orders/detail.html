@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h3">Order #{{ order.id }}</h1>
+<p>Status: <span class="badge bg-secondary">{{ order.status }}</span></p>
+<table class="table">
+  <thead><tr><th>Item</th><th>Qty</th><th class="text-end">Unit</th><th class="text-end">Line</th></tr></thead>
+  <tbody>
+    {% for i in order.items %}
+      <tr>
+        <td>{{ i.product_name }}</td>
+        <td>{{ i.quantity }}</td>
+        <td class="text-end">₹{{ '%.2f'|format(i.unit_price) }}</td>
+        <td class="text-end">₹{{ '%.2f'|format(i.line_total) }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<dl class="row">
+  <dt class="col-6">Subtotal</dt><dd class="col-6 text-end">₹{{ '%.2f'|format(order.subtotal) }}</dd>
+  <dt class="col-6">Discount</dt><dd class="col-6 text-end">– ₹{{ '%.2f'|format(order.discount) }}</dd>
+  <dt class="col-6">Tax</dt><dd class="col-6 text-end">₹{{ '%.2f'|format(order.tax) }}</dd>
+  <dt class="col-6">Shipping</dt><dd class="col-6 text-end">₹{{ '%.2f'|format(order.shipping) }}</dd>
+  <dt class="col-6 h5">Total</dt><dd class="col-6 h5 text-end">₹{{ '%.2f'|format(order.total) }}</dd>
+</dl>
+<a href="/" class="btn btn-outline-primary">Continue shopping</a>
+{% endblock %}

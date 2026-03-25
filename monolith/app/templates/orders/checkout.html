@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h3 mb-3">Checkout</h1>
+<div class="row">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Order Summary</h5>
+        <table class="table">
+          <thead><tr><th>Item</th><th class="text-end">Qty</th><th class="text-end">Price</th></tr></thead>
+          <tbody>
+            {% for l in lines %}
+              <tr>
+                <td>{{ l.name }}</td>
+                <td class="text-end">{{ l.qty }}</td>
+                <td class="text-end">₹{{ '%.2f'|format(l.unit_price * l.qty) }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <dl class="row">
+          <dt class="col-6">Subtotal</dt><dd class="col-6 text-end">₹{{ '%.2f'|format(quote.subtotal) }}</dd>
+          <dt class="col-6">Discount</dt><dd class="col-6 text-end">– ₹{{ '%.2f'|format(quote.discount) }}</dd>
+          <dt class="col-6">Tax</dt><dd class="col-6 text-end">₹{{ '%.2f'|format(quote.tax) }}</dd>
+          <dt class="col-6">Shipping</dt><dd class="col-6 text-end">₹{{ '%.2f'|format(quote.shipping) }}</dd>
+          <dt class="col-6 h5">Total</dt><dd class="col-6 h5 text-end">₹{{ '%.2f'|format(quote.total) }}</dd>
+        </dl>
+        <form method="post">
+          {{ csrf_token() }}
+          <button class="btn btn-primary btn-lg">Place Order (Mock Pay)</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
