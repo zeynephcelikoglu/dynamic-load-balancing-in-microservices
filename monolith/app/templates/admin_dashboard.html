@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+{% block title %}Control Center{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+  /* --- SAYFA ARKA PLANI VE ÜST MENÜYÜ KOYU YAPMA --- */
+  body { background-color: #0B1121 !important; color: #94A3B8 !important; }
+  nav, .navbar, header, .navbar-light .navbar-nav .nav-link, .bg-light { background-color: #0F172A !important; border-bottom: 1px solid #1E293B !important; color: #E2E8F0 !important; }
+  nav a, .navbar a, .navbar-brand, .nav-link, .navbar-text { color: #E2E8F0 !important; }
+  /* ------------------------------------------------- */
+
+  .cc-grid2  { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
+  .cc-grid4  { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; }
+  
+  /* Dark Mode Base Kart Rengi */
+  .cc-card   { background: #1E293B; border: 1px solid #334155; border-radius: 12px; padding: 1rem 1.25rem; color: #E2E8F0; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+
+  /* Soft & Clean Metric Cards (Koyu Tema) */
+  .cc-metric          { border-radius: 12px; padding: 1rem; background: #0F172A; border: 1px solid; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); }
+  
+  /* Soft Neon Border Renkleri */
+  .cc-metric.m-purple { border-color: #4F46E5; }
+  .cc-metric.m-teal   { border-color: #0D9488; }
+  .cc-metric.m-blue   { border-color: #2563EB; }
+  .cc-metric.m-amber  { border-color: #D97706; }
+  
+  .cc-metric .label   { font-size: 13px; margin: 0 0 6px; font-weight: 500; }
+  /* Soft Okunabilir Label Renkleri */
+  .cc-metric.m-purple .label { color: #A5B4FC; }
+  .cc-metric.m-teal   .label { color: #5EEAD4; }
+  .cc-metric.m-blue   .label { color: #93C5FD; }
+  .cc-metric.m-amber  .label { color: #FCD34D; }
+  
+  .cc-metric .val     { font-size: 24px; font-weight: 600; margin: 0; color: #F8FAFC; } 
+  
+  /* Diğer Stiller */
+  .cc-sec-title { font-size: 12px; font-weight: 600; color: #94A3B8; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .cc-btn         { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; border: 1px solid #475569; background: #334155; color: #E2E8F0; font-size: 13px; cursor: pointer; transition: all .2s; }
+  .cc-btn:hover   { background: #475569; border-color: #64748B; }
+  .cc-btn.primary { background: #4F46E5; color: #ffffff; border-color: transparent; }
+  .cc-btn.primary:hover { background: #4338CA; }
+  .cc-btn.danger  { border-color: #7F1D1D; color: #FCA5A5; background: rgba(220, 38, 38, 0.1); } 
+  .cc-btn.danger:hover  { background: rgba(220, 38, 38, 0.2); border-color: #991B1B; }
+  .cc-btn:disabled { opacity: .45; cursor: not-allowed; }
+  
+  /* Glow (Parlama) Efektli Durum Işıkları */
+  .dot        { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .dot.green  { background: #34D399; box-shadow: 0 0 8px rgba(52, 211, 153, 0.5); }
+  .dot.red    { background: #F87171; box-shadow: 0 0 8px rgba(248, 113, 113, 0.5); }
+  .dot.orange { background: #FBBF24; box-shadow: 0 0 8px rgba(251, 191, 36, 0.5); }
+  
+  .region-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #334155; font-size: 13px; }
+  .region-row:last-child { border-bottom: none; }
+  .badge      { font-size: 11px; padding: 3px 8px; border-radius: 99px; font-weight: 600; }
+  .badge.ok      { background: rgba(21, 128, 61, 0.2); color: #86EFAC; border: 1px solid #166534; } 
+  .badge.latency { background: rgba(161, 98, 7, 0.2); color: #FDE047; border: 1px solid #854D0E; }
+  
+  .log-box    { background: #020617; border-radius: 8px; padding: 12px 14px; font-family: monospace; font-size: 12px; color: #94A3B8; height: 140px; overflow-y: auto; border: 1px solid #1E293B; box-shadow: inset 0 2px 8px rgba(0,0,0,0.5); }
+  .log-line   { margin: 3px 0; }
+  .log-line.ok   { color: #34D399; }
+  .log-line.warn { color: #FBBF24; }
+  .log-line.err  { color: #F87171; }
+  
+  .queue-bar-wrap { margin: 6px 0; }
+  .queue-bar-label { display: flex; justify-content: space-between; font-size: 12px; color: #94A3B8; margin-bottom: 4px; }
+  .queue-bar-bg   { background: #334155; border-radius: 99px; height: 6px; }
+  .queue-bar-fill { background: #818CF8; border-radius: 99px; height: 6px; transition: width .4s; }
+  
+  .slider-row { display: flex; align-items: center; gap: 10px; }
+  .slider-row label { font-size: 13px; color: #94A3B8; min-width: 130px; }
+  .slider-row span  { font-size: 13px; font-weight: 600; color: #F8FAFC; min-width: 28px; text-align: right; }
+  
+  /* Koyu Tema Başlık Şeridi (Gece Mavisi Gradient) */
+  .header-strip { background: linear-gradient(to right, #1E1A38, #2E2854); border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; border: 1px solid #433B82; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+  @media (max-width: 640px) {
+    .cc-grid2, .cc-grid4 { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="container py-4" style="max-width: 960px;">
+
+  <div class="header-strip">
+    <div>
+      <h1 class="h4 mb-0" style="color: #E0E7FF;">System Orchestrator</h1>
+      <p style="color: #A5B4FC; font-size: 13px; margin: 0;">Autonomous Scaling & Distributed Infrastructure Monitor</p>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+      <span id="status-badge" class="badge ok" style="font-size:13px; padding:6px 12px; display:inline-flex; align-items:center; gap:6px;">
+        <span class="dot green"></span> Online
+      </span>
+    </div>
+  </div>
+
+  <div class="cc-grid4 mb-3">
+    <div class="cc-metric m-purple">
+      <p class="label"><i class="ti ti-stack-2"></i> Pending Messages</p>
+      <p class="val" id="m-pending">—</p>
+    </div>
+    <div class="cc-metric m-teal">
+      <p class="label"><i class="ti ti-server-2"></i> Active Microservices</p>
+      <p class="val" id="m-workers">—</p>
+    </div>
+    <div class="cc-metric m-blue">
+      <p class="label"><i class="ti ti-activity"></i> Autoscaler</p>
+      <p class="val" id="m-scaler" style="font-size:15px; padding-top:4px;">Stopped</p>
+    </div>
+    <div class="cc-metric m-amber">
+      <p class="label"><i class="ti ti-clock"></i> Last Updated</p>
+      <p class="val" id="m-time" style="font-size:14px; padding-top:4px;">—</p>
+    </div>
+  </div>
+
+  <div class="cc-grid2 mb-3">
+
+    <div class="cc-card">
+      <p class="cc-sec-title">Region Health</p>
+
+      <div class="region-row" style="font-weight: 600; color: #64748B; border-bottom: 2px solid #334155;">
+        <span>Service / Location</span>
+        <div class="d-flex gap-3 align-items-center">
+          <span style="width: 50px; text-align: center;">Status</span>
+          <span style="width: 46px; text-align: right;">Workers</span>
+        </div>
+      </div>
+
+      <div class="region-row">
+        <span><i class="ti ti-bell" style="font-size:14px; margin-right:6px;"></i>Tokyo — Notification</span>
+        <div class="d-flex gap-3 align-items-center">
+          <span class="badge latency" style="width: 50px; text-align: center;">120ms</span>
+          <b id="w-notif" style="color: #818CF8; width: 46px; text-align: right;">-</b>
+        </div>
+      </div>
+      <div class="region-row">
+        <span><i class="ti ti-database" style="font-size:14px; margin-right:6px;"></i>Istanbul — Database</span>
+        <div class="d-flex gap-3 align-items-center">
+          <span class="badge ok" style="width: 50px; text-align: center;">0ms</span>
+          <b id="w-db" style="color: #818CF8; width: 46px; text-align: right;">-</b>
+        </div>
+      </div>
+      <div class="region-row">
+        <span><i class="ti ti-shopping-cart" style="font-size:14px; margin-right:6px;"></i>Rome — Order</span>
+        <div class="d-flex gap-3 align-items-center">
+          <span class="badge ok" style="width: 50px; text-align: center;">50ms</span>
+          <b id="w-order" style="color: #818CF8; width: 46px; text-align: right;">-</b>
+        </div>
+      </div>
+      <div class="region-row">
+        <span><i class="ti ti-package" style="font-size:14px; margin-right:6px;"></i>London — Stock</span>
+        <div class="d-flex gap-3 align-items-center">
+          <span class="badge ok" style="width: 50px; text-align: center;">80ms</span>
+          <b id="w-stock" style="color: #818CF8; width: 46px; text-align: right;">-</b>
+        </div>
+      </div>
+
+      <div style="margin-top: 14px; border-top: 1px solid #334155; padding-top: 10px;" id="queue-bars"></div>
+    </div>
+
+    <div class="cc-card">
+      <p class="cc-sec-title">Service controls</p>
+
+      <div style="margin-bottom: 12px;">
+        <p style="font-size:13px; font-weight:500; margin:0 0 6px; color: #E2E8F0;">Autoscaler</p>
+        <div class="d-flex gap-2">
+          <button class="cc-btn primary" id="btn-scaler-start" onclick="startAutoscaler()">
+            <i class="ti ti-player-play"></i> Start
+          </button>
+          <button class="cc-btn danger" id="btn-scaler-stop" onclick="stopAutoscaler()" disabled>
+            <i class="ti ti-player-stop"></i> Stop
+          </button>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid #334155; padding-top:12px; margin-bottom:12px;">
+        <p style="font-size:13px; font-weight:500; margin:0 0 6px; color: #E2E8F0;">Stress Test <span style="font-weight:400; color:#94A3B8;">(150 × 4 queues)</span></p>
+        <button class="cc-btn primary" id="btn-stress" onclick="startStress()">
+          <i class="ti ti-bolt"></i> Run
+        </button>
+      </div>
+
+      <div style="border-top:1px solid #334155; padding-top:12px;">
+        <p style="font-size:12px; color:#94A3B8; margin:0 0 8px;">Scale Settings</p>
+        <div class="slider-row">
+          <label>Messages / Microservices Threshold</label>
+          <input type="range" min="5" max="50" value="15" step="1" style="flex:1;"
+                 oninput="document.getElementById('mpw-val').textContent=this.value">
+          <span id="mpw-val">15</span>
+        </div>
+        <div class="slider-row" style="margin-top:6px;">
+          <label>Max. Microservice Count</label>
+          <input type="range" min="1" max="20" value="10" step="1" style="flex:1;"
+                 oninput="document.getElementById('mw-val').textContent=this.value">
+          <span id="mw-val">10</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cc-card mb-3">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <p class="cc-sec-title" style="margin:0;">Live log</p>
+      <button class="cc-btn" style="padding:4px 10px; font-size:12px;" onclick="clearLog()">
+        <i class="ti ti-trash"></i> Clear
+      </button>
+    </div>
+    <div class="log-box" id="log-box"></div>
+  </div>
+
+</div>
+
+<script>
+const QUEUES = ['stock_queue','order_queue','notif_queue','order_db_write_queue'];
+const QUEUE_LABELS = { stock_queue:'Stock', order_queue:'Order', notif_queue:'Notification', order_db_write_queue:'Database' };
+let scalerRunning = false;
+
+function ts() { return new Date().toLocaleTimeString('en-GB'); }
+
+function addLog(msg, type='') {
+  const box = document.getElementById('log-box');
+  const line = document.createElement('div');
+  line.className = 'log-line ' + type;
+  line.textContent = '[' + ts() + '] ' + msg;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+function clearLog() {
+  document.getElementById('log-box').innerHTML = '';
+  addLog('Log cleared.');
+}
+
+function renderQueueBars(queueData) {
+  const container = document.getElementById('queue-bars');
+  if (!queueData || !queueData.length) { container.innerHTML = ''; return; }
+  const maxMsg = Math.max(...queueData.map(q => q.messages_ready || 0), 1);
+  container.innerHTML = queueData
+    .filter(q => QUEUES.includes(q.name))
+    .map(q => {
+      const count = q.messages_ready || 0;
+      const pct = Math.round((count / maxMsg) * 100);
+      return `<div class="queue-bar-wrap">
+        <div class="queue-bar-label"><span>${QUEUE_LABELS[q.name] || q.name}</span><span>${count}</span></div>
+        <div class="queue-bar-bg"><div class="queue-bar-fill" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('');
+}
+
+async function refreshStats() {
+  try {
+    const r = await fetch('{{ url_for("auth.system_stats") }}');
+    const d = await r.json();
+    document.getElementById('m-pending').textContent = d.pending_messages;
+    document.getElementById('m-time').textContent = ts();
+    if (d.queue_details) renderQueueBars(d.queue_details);
+
+    if (d.worker_counts) {
+      document.getElementById('w-db').textContent = d.worker_counts.db + ' w';
+      document.getElementById('w-order').textContent = d.worker_counts.order + ' w';
+      document.getElementById('w-stock').textContent = d.worker_counts.stock + ' w';
+      document.getElementById('w-notif').textContent = d.worker_counts.notif + ' w';
+
+      const totalWorkers = d.worker_counts.db + d.worker_counts.order + d.worker_counts.stock + d.worker_counts.notif;
+      document.getElementById('m-workers').textContent = totalWorkers > 0 ? totalWorkers : '0';
+    }
+  } catch(e) {
+    addLog('Failed to fetch stats: ' + e.message, 'warn');
+  }
+}
+
+async function startAutoscaler() {
+  document.getElementById('btn-scaler-start').disabled = true;
+  addLog('Starting autoscaler...');
+  try {
+    const r = await fetch('{{ url_for("auth.start_autoscaler") }}', {method:'POST'});
+    const d = await r.json();
+    if (d.status === 'success') {
+      scalerRunning = true;
+      document.getElementById('m-scaler').textContent = 'Running ✓';
+      document.getElementById('m-scaler').style.color = '#34D399'; 
+      document.getElementById('btn-scaler-stop').disabled = false;
+      addLog('Autoscaler started — pid: ' + d.pid, 'ok');
+    } else {
+      document.getElementById('btn-scaler-start').disabled = false;
+      addLog('Start error: ' + d.message, 'warn');
+    }
+  } catch(e) {
+    document.getElementById('btn-scaler-start').disabled = false;
+    addLog('Request failed: ' + e.message, 'err');
+  }
+}
+
+async function stopAutoscaler() {
+  addLog('Stopping autoscaler...');
+  try {
+    const r = await fetch('{{ url_for("auth.stop_autoscaler") }}', {method:'POST'});
+    const d = await r.json();
+    if (d.status === 'success') {
+      scalerRunning = false;
+      document.getElementById('m-scaler').textContent = 'Stopped';
+      document.getElementById('m-scaler').style.color = '#94A3B8';
+      document.getElementById('btn-scaler-start').disabled = false;
+      document.getElementById('btn-scaler-stop').disabled = true;
+      addLog('Autoscaler stopped.', 'warn');
+    } else {
+      addLog('Stop error: ' + d.message, 'warn');
+    }
+  } catch(e) {
+    addLog('Request failed: ' + e.message, 'err');
+  }
+}
+
+async function startStress() {
+  const btn = document.getElementById('btn-stress');
+  btn.disabled = true;
+  addLog('Starting Stress Test — 150 × 4 queues...');
+  try {
+    const r = await fetch('{{ url_for("auth.start_stress") }}', {method:'POST'});
+    const d = await r.json();
+    if (d.status === 'success') {
+      addLog('Stress Test running — pid: ' + d.pid, 'ok');
+      setTimeout(() => { btn.disabled = false; }, 5000);
+    } else {
+      addLog('Stress Test error: ' + d.message, 'err');
+      btn.disabled = false;
+    }
+  } catch(e) {
+    addLog('Request failed: ' + e.message, 'err');
+    btn.disabled = false;
+  }
+}
+
+// Boot
+addLog('Control center initialized.');
+refreshStats();
+setInterval(refreshStats, 10000);
+document.addEventListener("DOMContentLoaded", () => {
+    const brand = document.querySelector('.navbar-brand');
+    if (brand) {
+        // 1. Yazıyı ve Logoyu Değiştir (Örn: CORE ENGINE)
+        brand.innerHTML = `
+            <i class="ti ti-binary" style="-webkit-text-fill-color: #A5B4FC; margin-right:8px;"></i> 
+            <span style="font-weight:300; opacity:0.8;">CORE</span>
+            <span style="font-weight:800;">ENGINE</span>
+        `;
+        
+        
+        brand.setAttribute('href', '{{ url_for("auth.admin_dashboard") }}');
+        
+        // Opsiyonel: Logonun üzerine gelince Dashboard yazısı çıksın
+        brand.setAttribute('title', 'Back to Dashboard');
+    }
+});
+</script>
+{% endblock %}
