@@ -1,9 +1,15 @@
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
+from messaging import ensure_rabbitmq_topology, send_order_event
+
 from flask import Blueprint, jsonify, request, session
 from flask_login import login_required, current_user
 from ..models import Product, Category, Coupon, Order, OrderItem
 from ..utils.pricing import Line, quote
 
-bp = Blueprint("api", __name__)
+bp = Blueprint("user_api", __name__)
 
 def _coupon_lookup(code):
     return Coupon.query.filter_by(code=code).first()
@@ -60,3 +66,22 @@ def api_order(order_id):
             "unit_price": i.unit_price, "qty": i.quantity, "line_total": i.line_total
         } for i in o.items]
     })
+
+@bp.post("/register")
+def register_worker():
+    data = request.json
+    worker_type = data.get('worker_type')
+    
+    if not worker_type:
+        return jsonify({"error": "worker_type is required"}), 400
+    
+    ex, q, rk = ensure_rabbitmq_topology(worker_type)
+    
+    return jsonify({
+        "status": "registered",
+        "topology": {
+            "exchange": ex,
+            "queue": q,
+            "routing_key": rk
+        }
+    }), 200

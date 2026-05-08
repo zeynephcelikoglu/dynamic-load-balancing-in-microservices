@@ -1,24 +1,50 @@
-"""${message}
+# A generic, single database configuration.
 
-Revision ID: ${up_revision}
-Revises: ${down_revision | comma,n}
-Create Date: ${create_date}
+[alembic]
+# template used to generate migration files
+# file_template = %%(rev)s_%%(slug)s
 
-"""
-from alembic import op
-import sqlalchemy as sa
-${imports if imports else ""}
-
-# revision identifiers, used by Alembic.
-revision = ${repr(up_revision)}
-down_revision = ${repr(down_revision)}
-branch_labels = ${repr(branch_labels)}
-depends_on = ${repr(depends_on)}
+# set to 'true' to run the environment during
+# the 'revision' command, regardless of autogenerate
+# revision_environment = false
 
 
-def upgrade():
-    ${upgrades if upgrades else "pass"}
+# Logging configuration
+[loggers]
+keys = root,sqlalchemy,alembic,flask_migrate
 
+[handlers]
+keys = console
 
-def downgrade():
-    ${downgrades if downgrades else "pass"}
+[formatters]
+keys = generic
+
+[logger_root]
+level = WARN
+handlers = console
+qualname =
+
+[logger_sqlalchemy]
+level = WARN
+handlers =
+qualname = sqlalchemy.engine
+
+[logger_alembic]
+level = INFO
+handlers =
+qualname = alembic
+
+[logger_flask_migrate]
+level = INFO
+handlers =
+qualname = flask_migrate
+
+[handler_console]
+class = StreamHandler
+args = (sys.stderr,)
+level = NOTSET
+formatter = generic
+
+[formatter_generic]
+format = %(levelname)-5.5s [%(name)s] %(message)s
+datefmt = %H:%M:%S

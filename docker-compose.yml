@@ -21,3 +21,79 @@ services:
       - "3002:3001"
     volumes:
       - ./kuma-data:/app/data
+
+  stock_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python microservices/stock_worker.py
+    depends_on:
+      - rabbitmq
+      - redis
+    env_file: .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+  
+  order_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python microservices/order_worker.py
+    depends_on:
+      - rabbitmq
+      - redis
+    env_file: .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  notif_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python microservices/notif_worker.py
+    depends_on:
+      - rabbitmq
+      - redis
+    env_file: .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  db_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /app/monolith
+    command: python db_worker.py
+    depends_on:
+      - rabbitmq
+      - redis
+    env_file: .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+ 
+  # ROMA MERKEZ (50ms)
+  pumba-rome:
+    image: gaiaadm/pumba:latest
+    container_name: pumba_rome
+    command: netem --duration 24h delay --time 50 "re2:.*order_worker.*"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+  # LONDRA MERKEZ (80ms)
+  pumba-london:
+    image: gaiaadm/pumba:latest
+    container_name: pumba_london
+    command: netem --duration 24h delay --time 80 "re2:.*stock_worker.*"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+  # TOKYO MERKEZ (120ms)
+  pumba-tokyo:
+    image: gaiaadm/pumba:latest
+    container_name: pumba_tokyo
+    command: netem --duration 24h delay --time 120 "re2:.*notif_worker.*"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
