@@ -19,11 +19,10 @@ SCALING_MAP = {
     "order_db_write_queue": "db_worker" 
 }
 
-POLLING_INTERVAL = 2      
-MAX_WORKERS = 5           
+POLLING_INTERVAL = 5      
+MAX_WORKERS = 10           
 MIN_WORKERS = 1           
-MESSAGES_PER_WORKER = 3   
-
+MESSAGES_PER_WORKER = 15  
 client = docker.from_env()
 
 def get_queue_depth(queue_name):
