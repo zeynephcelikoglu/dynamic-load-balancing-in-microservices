@@ -13,17 +13,17 @@
               <tr>
                 <td>{{ l.name }}</td>
                 <td class="text-end">{{ l.qty }}</td>
-                <td class="text-end">₹{{ '%.2f'|format(l.unit_price * l.qty) }}</td>
+                <td class="text-end">TL{{ '%.2f'|format(l.unit_price * l.qty) }}</td>
               </tr>
             {% endfor %}
           </tbody>
         </table>
         <dl class="row">
-          <dt class="col-6">Subtotal</dt><dd class="col-6 text-end">₹{{ '%.2f'|format(quote.subtotal) }}</dd>
-          <dt class="col-6">Discount</dt><dd class="col-6 text-end">– ₹{{ '%.2f'|format(quote.discount) }}</dd>
-          <dt class="col-6">Tax</dt><dd class="col-6 text-end">₹{{ '%.2f'|format(quote.tax) }}</dd>
-          <dt class="col-6">Shipping</dt><dd class="col-6 text-end">₹{{ '%.2f'|format(quote.shipping) }}</dd>
-          <dt class="col-6 h5">Total</dt><dd class="col-6 h5 text-end">₹{{ '%.2f'|format(quote.total) }}</dd>
+          <dt class="col-6">Subtotal</dt><dd class="col-6 text-end">TL{{ '%.2f'|format(quote.subtotal) }}</dd>
+          <dt class="col-6">Discount</dt><dd class="col-6 text-end">TL{{ '%.2f'|format(quote.discount) }}</dd>
+          <dt class="col-6">Tax</dt><dd class="col-6 text-end">TL{{ '%.2f'|format(quote.tax) }}</dd>
+          <dt class="col-6">Shipping</dt><dd class="col-6 text-end">TL{{ '%.2f'|format(quote.shipping) }}</dd>
+          <dt class="col-6 h5">Total</dt><dd class="col-6 h5 text-end">TL{{ '%.2f'|format(quote.total) }}</dd>
         </dl>
         <form method="post">
           {{ csrf_token() }}

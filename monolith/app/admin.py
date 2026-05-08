@@ -21,11 +21,13 @@ class MyAdminIndex(AdminIndexView):
 
 def register_admin(app):
     admin.init_app(app, index_view=MyAdminIndex())
-    admin.add_view(SecureModelView(User, db.session))
-    admin.add_view(SecureModelView(Category, db.session))
-    admin.add_view(SecureModelView(Product, db.session))
-    admin.add_view(SecureModelView(Coupon, db.session))
-    admin.add_view(SecureModelView(Order, db.session))
-    admin.add_view(SecureModelView(OrderItem, db.session))
-    admin.add_view(SecureModelView(Address, db.session))
-    admin.add_view(SecureModelView(InventoryMovement, db.session))
+    
+    if len(admin._views) <= 1:
+        admin.add_view(SecureModelView(User, db.session, name="Users", endpoint="admin_users"))
+        admin.add_view(SecureModelView(Category, db.session))
+        admin.add_view(SecureModelView(Product, db.session))
+        admin.add_view(SecureModelView(Coupon, db.session))
+        admin.add_view(SecureModelView(Order, db.session))
+        admin.add_view(SecureModelView(OrderItem, db.session))
+        admin.add_view(SecureModelView(Address, db.session))
+        admin.add_view(SecureModelView(InventoryMovement, db.session))

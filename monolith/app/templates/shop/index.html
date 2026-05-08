@@ -26,7 +26,7 @@
         <h5 class="card-title">{{ p.name }}</h5>
         <p class="card-text text-muted small">{{ p.description[:100] }}...</p>
         <div class="d-flex justify-content-between align-items-center">
-          <span class="fw-bold">₹{{ '%.2f'|format(p.price) }}</span>
+          <span class="fw-bold">TL{{ '%.2f'|format(p.price) }}</span>
           <a href="{{ url_for('shop.product_detail', pid=p.id) }}" class="btn btn-sm btn-outline-primary">View</a>
         </div>
       </div>
